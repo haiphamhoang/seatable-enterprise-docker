@@ -7,9 +7,12 @@ DB_ROOT_PASSWD = os.getenv('DB_ROOT_PASSWD', '')
 # SEATABLE_ADMIN_PASSWORD = os.getenv('SEATABLE_ADMIN_PASSWORD')
 SEATABLE_SERVER_LETSENCRYPT = os.getenv('SEATABLE_SERVER_LETSENCRYPT', 'False')
 SEATABLE_SERVER_HOSTNAME = os.getenv('SEATABLE_SERVER_HOSTNAME', '127.0.0.1')
+
+REDIS_SERVER_HOSTNAME = os.getenv('REDIS_SERVER_HOSTNAME', 'redis')
+MEMCACHED_SERVER_HOSTNAME = os.getenv('MEMCACHED_SERVER_HOSTNAME', 'memcached')
 PRIVATE_KEY = get_random_secret_key()
 
-server_prefix = 'https://' if SEATABLE_SERVER_LETSENCRYPT == 'True' else 'http://'
+server_prefix = os.getenv('SERVER_URL_PREFIX', 'https://' if SEATABLE_SERVER_LETSENCRYPT == 'True' else 'http://')
 SERVER_URL = server_prefix + SEATABLE_SERVER_HOSTNAME
 
 
@@ -93,7 +96,7 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django_pylibmc.memcached.PyLibMCCache',
-        'LOCATION': 'memcached',
+        'LOCATION': '%s',
     },
     'locmem': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -124,7 +127,7 @@ FILE_SERVER_ROOT = '%s/seafhttp/'
 
 ENABLE_USER_TO_SET_NUMBER_SEPARATOR = True
 
-""" % (DB_HOST, DB_ROOT_PASSWD, get_random_secret_key(), PRIVATE_KEY,
+""" % (DB_HOST, DB_ROOT_PASSWD,  MEMCACHED_SERVER_HOSTNAME, get_random_secret_key(), PRIVATE_KEY,
        SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL)
 
 if not os.path.exists(dtable_web_config_path):
@@ -171,11 +174,11 @@ dtable_server_config = """
     "database": "dtable_db",
     "port": 3306,
     "private_key": "%s",
-    "redis_host": "redis",
+    "redis_host": "%s",
     "redis_port": 6379,
     "redis_password": ""
 }
-""" % (DB_HOST, DB_ROOT_PASSWD, PRIVATE_KEY)
+""" % (DB_HOST, DB_ROOT_PASSWD, PRIVATE_KEY, REDIS_SERVER_HOSTNAME)
 
 if not os.path.exists(dtable_server_config_path):
     with open(dtable_server_config_path, 'w') as f:
@@ -243,9 +246,9 @@ db_name = dtable_db
 
 
 [REDIS]
-host = redis
+host = %s
 port = 6379
-""" % (DB_HOST, DB_ROOT_PASSWD)
+""" % (DB_HOST, DB_ROOT_PASSWD, REDIS_SERVER_HOSTNAME)
 
 if not os.path.exists(dtable_events_config_path):
     with open(dtable_events_config_path, 'w') as f:
