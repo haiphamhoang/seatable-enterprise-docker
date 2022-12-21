@@ -1,4 +1,5 @@
-FROM seatable/seatable-enterprise:latest
+ARG SEATABLE_VERSION=latest
+FROM seatable/seatable-enterprise:${SEATABLE_VERSION}
 
 LABEL description="Seatable with custom config."
 
