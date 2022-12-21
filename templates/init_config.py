@@ -5,12 +5,6 @@ REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
 MEMCACHED_HOST = os.getenv('MEMCACHED_HOST', 'memcached')
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_ROOT_PASSWD = os.getenv('DB_ROOT_PASSWD', '')
-DB_ROOT_PASSWD_FILE = os.getenv('DB_ROOT_PASSWD_FILE', '')
-
-if os.path.exists(DB_ROOT_PASSWD_FILE):
-    with open(DB_ROOT_PASSWD_FILE, 'r') as f:
-        DB_ROOT_PASSWD = f.readline().strip()
-        os.environ['DB_ROOT_PASSWD'] = DB_ROOT_PASSWD
         
 # SEATABLE_ADMIN_EMAIL = os.getenv('SEATABLE_ADMIN_EMAIL')
 # SEATABLE_ADMIN_PASSWORD = os.getenv('SEATABLE_ADMIN_PASSWORD')
