@@ -10,14 +10,16 @@ function log() {
 
 # load env function
 function load_env() {
+    log "Load custom env"
     env_var="DB_ROOT_PASSWD"
     file_env_var="${env_var}_FILE"
     if [[ -n "${!file_env_var:-}" ]]; then
         if [[ -r "${!file_env_var:-}" ]]; then
+            export "ok=abcd"
             export "${env_var}=$(< "${!file_env_var}")"
             unset "${file_env_var}"
         else
-            warn "Skipping export of '${env_var}'. '${!file_env_var:-}' is not readable."
+            log "Skipping export of ${env_var}. ${!file_env_var:-} is not readable."
         fi
     fi
 }
