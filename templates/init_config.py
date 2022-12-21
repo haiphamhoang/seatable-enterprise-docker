@@ -1,18 +1,27 @@
 import os
 from django.core.management.utils import get_random_secret_key
 
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+MEMCACHED_HOST = os.getenv('MEMCACHED_HOST', 'memcached')
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_ROOT_PASSWD = os.getenv('DB_ROOT_PASSWD', '')
+DB_ROOT_PASSWD_FILE = os.getenv('DB_ROOT_PASSWD_FILE', '')
+
+if os.path.exists(DB_ROOT_PASSWD_FILE):
+    with open(DB_ROOT_PASSWD_FILE, 'r') as f:
+        DB_ROOT_PASSWD = f.readline().strip()
+        
 # SEATABLE_ADMIN_EMAIL = os.getenv('SEATABLE_ADMIN_EMAIL')
 # SEATABLE_ADMIN_PASSWORD = os.getenv('SEATABLE_ADMIN_PASSWORD')
 SEATABLE_SERVER_LETSENCRYPT = os.getenv('SEATABLE_SERVER_LETSENCRYPT', 'False')
-SEATABLE_SERVER_HOSTNAME = os.getenv('SEATABLE_SERVER_HOSTNAME', '127.0.0.1')
 
-REDIS_SERVER_HOSTNAME = os.getenv('REDIS_SERVER_HOSTNAME', 'redis')
-MEMCACHED_SERVER_HOSTNAME = os.getenv('MEMCACHED_SERVER_HOSTNAME', 'memcached')
+SEATABLE_SERVER_HOSTNAME = os.getenv('SEATABLE_SERVER_HOSTNAME', '127.0.0.1')
+SEATABLE_SERVER_URL_FORCE_HTTPS = os.getenv('SEATABLE_SERVER_URL_FORCE_HTTPS', SEATABLE_SERVER_LETSENCRYPT)
+
+
 PRIVATE_KEY = get_random_secret_key()
 
-server_prefix = os.getenv('SERVER_URL_PREFIX', 'https://' if SEATABLE_SERVER_LETSENCRYPT == 'True' else 'http://')
+server_prefix = 'https://' if SEATABLE_SERVER_URL_FORCE_HTTPS == 'True' else 'http://'
 SERVER_URL = server_prefix + SEATABLE_SERVER_HOSTNAME
 
 
@@ -127,7 +136,7 @@ FILE_SERVER_ROOT = '%s/seafhttp/'
 
 ENABLE_USER_TO_SET_NUMBER_SEPARATOR = True
 
-""" % (DB_HOST, DB_ROOT_PASSWD,  MEMCACHED_SERVER_HOSTNAME, get_random_secret_key(), PRIVATE_KEY,
+""" % (DB_HOST, DB_ROOT_PASSWD,  MEMCACHED_HOST, get_random_secret_key(), PRIVATE_KEY,
        SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL)
 
 if not os.path.exists(dtable_web_config_path):
@@ -178,7 +187,7 @@ dtable_server_config = """
     "redis_port": 6379,
     "redis_password": ""
 }
-""" % (DB_HOST, DB_ROOT_PASSWD, PRIVATE_KEY, REDIS_SERVER_HOSTNAME)
+""" % (DB_HOST, DB_ROOT_PASSWD, PRIVATE_KEY, REDIS_HOST)
 
 if not os.path.exists(dtable_server_config_path):
     with open(dtable_server_config_path, 'w') as f:
@@ -248,7 +257,7 @@ db_name = dtable_db
 [REDIS]
 host = %s
 port = 6379
-""" % (DB_HOST, DB_ROOT_PASSWD, REDIS_SERVER_HOSTNAME)
+""" % (DB_HOST, DB_ROOT_PASSWD, REDIS_HOST)
 
 if not os.path.exists(dtable_events_config_path):
     with open(dtable_events_config_path, 'w') as f:
