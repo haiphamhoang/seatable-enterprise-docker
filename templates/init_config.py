@@ -196,6 +196,7 @@ dtable_db_config = """
 host = 127.0.0.1
 port = 7777
 log_dir = /opt/seatable/logs
+row_update_limit = 5000
 
 [storage]
 data_dir = /opt/seatable/db-data
