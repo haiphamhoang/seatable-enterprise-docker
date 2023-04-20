@@ -50,6 +50,9 @@ user = root
 password = %s
 db_name = seafile_db
 connection_charset = utf8
+
+[history]
+keep_days = 60
 """ % (DB_HOST, DB_ROOT_PASSWD)
 
 if not os.path.exists(seafile_config_path):
