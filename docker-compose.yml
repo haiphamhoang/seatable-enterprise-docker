@@ -29,7 +29,7 @@ services:
     build:
       context: .
       args:
-        SEATABLE_VERSION: '3.1.13'
+        SEATABLE_VERSION: '4.3.10'
     container_name: seatable
     ports:
       - "80:80"                                         # HTTP port on the Docker host and the port in the container -- must be changed if port 80 is already in use on Docker host
@@ -38,8 +38,8 @@ services:
       - /opt/seatable/seatable-data:/shared             # Volume of SeaTable (directory for persistent storage) and mount point in container -- can be changed (not advised)
     environment:
       - DB_HOST=seatable-mysql
-      #- DB_ROOT_PASSWD=hellopassword                         # Root password of MySQL -- must be changed to the value set above
-      - DB_ROOT_PASSWD_FILE=/run/secrets/shared_mysql_root_password
+      - DB_ROOT_PASSWD=hellopassword                         # Root password of MySQL -- must be changed to the value set above
+      #- DB_ROOT_PASSWD_FILE=/run/secrets/shared_mysql_root_password
       - REDIS_HOST=seatable-redis
       - MEMCACHED_HOST=seatable-memcached
       - SEATABLE_SERVER_URL_FORCE_HTTPS=True

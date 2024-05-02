@@ -1,23 +1,17 @@
 import os
 from django.core.management.utils import get_random_secret_key
-
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
 MEMCACHED_HOST = os.getenv('MEMCACHED_HOST', 'memcached')
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_ROOT_PASSWD = os.getenv('DB_ROOT_PASSWD', '')
-        
-# SEATABLE_ADMIN_EMAIL = os.getenv('SEATABLE_ADMIN_EMAIL')
-# SEATABLE_ADMIN_PASSWORD = os.getenv('SEATABLE_ADMIN_PASSWORD')
+SEATABLE_SERVER_PROTOCOL = os.getenv('SEATABLE_SERVER_PROTOCOL', '')
 SEATABLE_SERVER_LETSENCRYPT = os.getenv('SEATABLE_SERVER_LETSENCRYPT', 'False')
-
 SEATABLE_SERVER_HOSTNAME = os.getenv('SEATABLE_SERVER_HOSTNAME', '127.0.0.1')
-SEATABLE_SERVER_URL_FORCE_HTTPS = os.getenv('SEATABLE_SERVER_URL_FORCE_HTTPS', SEATABLE_SERVER_LETSENCRYPT)
-
-
 PRIVATE_KEY = get_random_secret_key()
 
-server_prefix = 'https://' if SEATABLE_SERVER_URL_FORCE_HTTPS == 'True' else 'http://'
+server_prefix = 'https://' if (SEATABLE_SERVER_LETSENCRYPT == 'True' or SEATABLE_SERVER_PROTOCOL == 'https') else 'http://'
 SERVER_URL = server_prefix + SEATABLE_SERVER_HOSTNAME
+TIME_ZONE = os.getenv('TIME_ZONE', 'UTC')
 
 
 # seatable-controller
@@ -32,6 +26,8 @@ ENABLE_DTABLE_EVENTS=true
 DTABLE_EVENTS_TASK_MODE=all
 DTABLE_SERVER_MEMORY_SIZE=8192
 DTABLE_SERVER_PING_TIMEOUT=20
+ENABLE_DTABLE_SERVER_SLAVE=false
+DTABLE_SERVER_SLAVE_MEMORY_SIZE=4096
 """
 # seatable-controller.conf do not auto init
 
@@ -134,8 +130,13 @@ FILE_SERVER_ROOT = '%s/seafhttp/'
 
 ENABLE_USER_TO_SET_NUMBER_SEPARATOR = True
 
-""" % (DB_HOST, DB_ROOT_PASSWD,  MEMCACHED_HOST, get_random_secret_key(), PRIVATE_KEY,
-       SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL)
+TIME_ZONE = '%s'
+
+DISABLE_ADDRESSBOOK_V1 = True
+ENABLE_ADDRESSBOOK_V2 = True
+
+""" % (DB_HOST, DB_ROOT_PASSWD, MEMCACHED_HOST, get_random_secret_key(), PRIVATE_KEY,
+       SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, TIME_ZONE)
 
 if not os.path.exists(dtable_web_config_path):
     with open(dtable_web_config_path, 'w') as f:
@@ -147,7 +148,7 @@ gunicorn_config_path = '/opt/seatable/conf/gunicorn.py'
 gunicorn_config = """
 daemon = True
 workers = 5
-threads = 2
+threads = 5
 
 # default localhost:8000
 bind = '127.0.0.1:8000'
@@ -263,6 +264,14 @@ if not os.path.exists(dtable_events_config_path):
         f.write(dtable_events_config)
 
 
+# current version
+current_version = str(os.environ.get('server_version'))
+version_path = '/opt/seatable/conf/current_version.txt'
+if not os.path.exists(version_path):
+    with open(version_path, 'w') as fp:
+        fp.write(current_version)
+
+
 # nginx
 nginx_config_path = '/opt/seatable/conf/nginx.conf'
 nginx_common_config = """
@@ -286,7 +295,7 @@ nginx_common_config = """
             return 204;
         }
         proxy_pass         http://127.0.0.1:8000;
-        proxy_set_header   Host $host;
+        proxy_set_header   Host $http_host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Host $server_name;

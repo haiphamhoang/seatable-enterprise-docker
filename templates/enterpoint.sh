@@ -15,7 +15,6 @@ function load_env() {
     file_env_var="${env_var}_FILE"
     if [[ -n "${!file_env_var:-}" ]]; then
         if [[ -r "${!file_env_var:-}" ]]; then
-            export "ok=abcd"
             export "${env_var}=$(< "${!file_env_var}")"
             unset "${file_env_var}"
         else
@@ -24,11 +23,16 @@ function load_env() {
     fi
 }
 
+
+is_first_start=0
 # init config
 if [ "`ls -A /opt/seatable/conf`" = "" ]; then
     log "Start init"
+
+    is_first_start=1
+
     load_env
-    
+
     /templates/seatable.sh init-sql &>> /opt/seatable/logs/init.log
 
     /templates/seatable.sh init &>> /opt/seatable/logs/init.log
@@ -98,6 +102,33 @@ else
     chmod 0644 /templates/logrotate-conf/logrotate-cron
     /usr/bin/crontab /templates/logrotate-conf/logrotate-cron
 fi
+
+
+# auto start
+if [[ $SEATABLE_START_MODE = "cluster" ]] || [[ -f /opt/seatable/conf/seatable-controller.conf ]] ;then
+    # cluster mode
+    log "Start cluster server"
+    /templates/seatable.sh start
+
+else 
+    # auto upgrade sql
+    python3 /templates/upgrade_sql.py &>> /opt/seatable/logs/init.log
+    sleep 5
+
+    # auto start
+    log "Start server"
+    /templates/seatable.sh start
+
+    # init superuser
+    if [[ ${is_first_start} -eq 1 ]]; then
+        sleep 5
+        log "Auto create superuser"
+        /templates/seatable.sh auto-create-superuser ${is_first_start} &>> /opt/seatable/logs/init.log &
+    fi
+
+fi
+
+log "For more startup information, please check the /opt/seatable/logs/init.log"
 
 
 #
