@@ -1,23 +1,19 @@
 import os
 from django.core.management.utils import get_random_secret_key
-
+# Additional env variables
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
 MEMCACHED_HOST = os.getenv('MEMCACHED_HOST', 'memcached')
+
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_ROOT_PASSWD = os.getenv('DB_ROOT_PASSWD', '')
-        
-# SEATABLE_ADMIN_EMAIL = os.getenv('SEATABLE_ADMIN_EMAIL')
-# SEATABLE_ADMIN_PASSWORD = os.getenv('SEATABLE_ADMIN_PASSWORD')
+SEATABLE_SERVER_PROTOCOL = os.getenv('SEATABLE_SERVER_PROTOCOL', '')
 SEATABLE_SERVER_LETSENCRYPT = os.getenv('SEATABLE_SERVER_LETSENCRYPT', 'False')
-
 SEATABLE_SERVER_HOSTNAME = os.getenv('SEATABLE_SERVER_HOSTNAME', '127.0.0.1')
-SEATABLE_SERVER_URL_FORCE_HTTPS = os.getenv('SEATABLE_SERVER_URL_FORCE_HTTPS', SEATABLE_SERVER_LETSENCRYPT)
-
-
 PRIVATE_KEY = get_random_secret_key()
 
-server_prefix = 'https://' if SEATABLE_SERVER_URL_FORCE_HTTPS == 'True' else 'http://'
+server_prefix = 'https://' if (SEATABLE_SERVER_LETSENCRYPT == 'True' or SEATABLE_SERVER_PROTOCOL == 'https') else 'http://'
 SERVER_URL = server_prefix + SEATABLE_SERVER_HOSTNAME
+TIME_ZONE = os.getenv('TIME_ZONE', 'UTC')
 
 
 # seatable-controller
@@ -32,6 +28,9 @@ ENABLE_DTABLE_EVENTS=true
 DTABLE_EVENTS_TASK_MODE=all
 DTABLE_SERVER_MEMORY_SIZE=8192
 DTABLE_SERVER_PING_TIMEOUT=20
+ENABLE_DTABLE_SERVER_SLAVE=false
+DTABLE_SERVER_SLAVE_MEMORY_SIZE=4096
+ENABLE_API_GATEWAY=true
 """
 # seatable-controller.conf do not auto init
 
@@ -134,8 +133,13 @@ FILE_SERVER_ROOT = '%s/seafhttp/'
 
 ENABLE_USER_TO_SET_NUMBER_SEPARATOR = True
 
-""" % (DB_HOST, DB_ROOT_PASSWD,  MEMCACHED_HOST, get_random_secret_key(), PRIVATE_KEY,
-       SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL)
+TIME_ZONE = '%s'
+
+DISABLE_ADDRESSBOOK_V1 = True
+ENABLE_ADDRESSBOOK_V2 = True
+
+""" % (DB_HOST, DB_ROOT_PASSWD, MEMCACHED_HOST, get_random_secret_key(), PRIVATE_KEY,
+       SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, TIME_ZONE)
 
 if not os.path.exists(dtable_web_config_path):
     with open(dtable_web_config_path, 'w') as f:
@@ -147,7 +151,7 @@ gunicorn_config_path = '/opt/seatable/conf/gunicorn.py'
 gunicorn_config = """
 daemon = True
 workers = 5
-threads = 2
+threads = 5
 
 # default localhost:8000
 bind = '127.0.0.1:8000'
@@ -199,21 +203,17 @@ dtable_db_config = """
 host = 127.0.0.1
 port = 7777
 log_dir = /opt/seatable/logs
-row_update_limit = 5000
 
 [storage]
 data_dir = /opt/seatable/db-data
 
 [dtable cache]
-private_key = "%s"
 dtable_server_url = "http://127.0.0.1:5000"
-total_cache_size = 100
 
 [backup]
-dtable_storage_server_url = http://127.0.0.1:6666
-backup_interval = 1440
+dtable_storage_server_url = "http://127.0.0.1:6666"
 keep_backup_num = 3
-""" % (PRIVATE_KEY, )
+"""
 
 if not os.path.exists(dtable_db_config_path):
     with open(dtable_db_config_path, 'w') as f:
@@ -263,6 +263,34 @@ if not os.path.exists(dtable_events_config_path):
         f.write(dtable_events_config)
 
 
+# current version
+current_version = str(os.environ.get('server_version'))
+version_path = '/opt/seatable/conf/current_version.txt'
+if not os.path.exists(version_path):
+    with open(version_path, 'w') as fp:
+        fp.write(current_version)
+
+
+# api-gateway
+api_gateway_config_path = '/opt/seatable/conf/dtable-api-gateway.conf'
+api_gateway_config = """
+[general]
+log_dir = /opt/seatable/logs
+host = 127.0.0.1
+port = 7780
+
+[dtable-db]
+cluster_mode = false
+server_address = "http://127.0.0.1:7777"
+
+[dtable-server]
+cluster_mode = false
+server_address = "http://127.0.0.1:5000"
+"""
+
+# dtable-api-gateway.conf do not auto init
+
+
 # nginx
 nginx_config_path = '/opt/seatable/conf/nginx.conf'
 nginx_common_config = """
@@ -286,7 +314,7 @@ nginx_common_config = """
             return 204;
         }
         proxy_pass         http://127.0.0.1:8000;
-        proxy_set_header   Host $host;
+        proxy_set_header   Host $http_host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Host $server_name;
@@ -355,7 +383,7 @@ nginx_common_config = """
         rewrite ^/dtable-server/(.*)$ /$1 break;
         proxy_pass         http://dtable_servers;
         proxy_redirect     off;
-        proxy_set_header   Host              $host;
+        proxy_set_header   Host              $http_host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Host  $server_name;
@@ -381,7 +409,7 @@ nginx_common_config = """
         }
         proxy_pass         http://127.0.0.1:7777/;
         proxy_redirect     off;
-        proxy_set_header   Host              $host;
+        proxy_set_header   Host              $http_host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Host  $server_name;
@@ -391,6 +419,32 @@ nginx_common_config = """
         error_log       /opt/nginx-logs/dtable-db.error.log;
     }
 
+    location /api-gateway/ {
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods GET,POST,PUT,DELETE,OPTIONS;
+        add_header Access-Control-Allow-Headers "deviceType,token, authorization, content-type";
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin *;
+            add_header Access-Control-Allow-Methods GET,POST,PUT,DELETE,OPTIONS;
+            add_header Access-Control-Allow-Headers "deviceType,token, authorization, content-type";
+            return 204;
+        }
+        proxy_pass         http://127.0.0.1:7780/;
+        proxy_redirect     off;
+        proxy_set_header   Host              $http_host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Host  $server_name;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+
+        proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Methods;
+        proxy_hide_header Access-Control-Allow-Headers;
+
+        access_log      /opt/nginx-logs/api-gateway.access.log seatableformat;
+        error_log       /opt/nginx-logs/api-gateway.error.log;
+    }
+    
 }
 """
 
