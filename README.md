@@ -1,6 +1,6 @@
 # docker-seatable
 
-## Env
+## Addition Enviroments
 
 - REDIS_HOST: `string`
 - MEMCACHED_HOST: `string`
@@ -11,7 +11,7 @@
 
 
 
-# Dev
+# Develop
 
 ## Upgrade 
 ### Checking new script
