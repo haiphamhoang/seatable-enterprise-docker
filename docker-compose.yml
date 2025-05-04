@@ -8,7 +8,7 @@ networks:
 
 services:
   seatable-server:
-    image: ${SEATABLE_IMAGE:-seatable/seatable-enterprise:5.1.9}
+    image: ${SEATABLE_IMAGE:-seatable/seatable-enterprise:5.2.7}
     container_name: seatable-server
     volumes:
       - type: bind
@@ -45,8 +45,6 @@ services:
 
     depends_on:
       mariadb:
-        condition: service_healthy
-      memcached:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -89,21 +87,8 @@ services:
       # otherwise the container stays unhealthy.
       # more info at https://admin.seatable.io/upgrade/extra-upgrade-notice/
 
-  memcached:
-    image: ${SEATABLE_MEMCACHED_IMAGE:-memcached:1.6.32-bookworm}
-    restart: unless-stopped
-    container_name: memcached
-    entrypoint: memcached -m 256
-    networks:
-      - backend-seatable-net
-    healthcheck:
-      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/localhost/11211'"]
-      interval: 20s
-      retries: 3
-      timeout: 5s
-
   redis:
-    image: ${SEATABLE_REDIS_IMAGE:-redis:7.2.6-bookworm}
+    image: ${SEATABLE_REDIS_IMAGE:-redis:7.2.7-bookworm}
     restart: unless-stopped
     container_name: redis
     networks:

@@ -2,7 +2,6 @@ import os
 from django.core.management.utils import get_random_secret_key
 # Additional env variables
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
-MEMCACHED_HOST = os.getenv('MEMCACHED_HOST', 'memcached')
 
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_ROOT_PASSWD = os.getenv('DB_ROOT_PASSWD', '')
@@ -101,14 +100,10 @@ DATABASES = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django_pylibmc.memcached.PyLibMCCache',
-        'LOCATION': '%s',
-    },
-    'locmem': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-    },
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://%s:6379',
+    }
 }
-COMPRESS_CACHE_BACKEND = 'locmem'
 
 SECRET_KEY = '%s'
 
@@ -138,7 +133,7 @@ TIME_ZONE = '%s'
 DISABLE_ADDRESSBOOK_V1 = True
 ENABLE_ADDRESSBOOK_V2 = True
 
-""" % (DB_HOST, DB_ROOT_PASSWD, MEMCACHED_HOST, get_random_secret_key(), PRIVATE_KEY,
+""" % (DB_HOST, DB_ROOT_PASSWD, REDIS_HOST, get_random_secret_key(), PRIVATE_KEY,
        SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, SERVER_URL, TIME_ZONE)
 
 if not os.path.exists(dtable_web_config_path):
@@ -414,6 +409,7 @@ nginx_common_config = """
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Host  $server_name;
         proxy_set_header   X-Forwarded-Proto $scheme;
+        client_max_body_size 10m;
 
         access_log      /opt/nginx-logs/dtable-db.access.log seatableformat;
         error_log       /opt/nginx-logs/dtable-db.error.log;

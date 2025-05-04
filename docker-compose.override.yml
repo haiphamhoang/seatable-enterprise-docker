@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   seatable-server:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SEATABLE_VERSION: ${SEATABLE_VERSION:-5.1.9}
+        SEATABLE_VERSION: ${SEATABLE_VERSION:-5.2.7}
